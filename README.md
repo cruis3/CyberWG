@@ -7,7 +7,7 @@ I designed this due to so many other projects required docker or alot of configu
 
 Requirements:
 OS: Ubuntu / Debian | CentOS / RHEL | Arch
-
+< br />
 WireGuard: 
 Ubuntu/Debian: sudo apt install wireguard
 CentOS/RHEL: sudo yum install wireguard-tools
