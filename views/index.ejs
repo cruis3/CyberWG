@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberWG - WireGuard Management</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚡ CYBERWG</h1>
+      <div class="header-actions">
+        <span class="server-info">🌐 <%= wgHost || 'Not configured' %></span>
+        <a href="/logout" class="btn btn-secondary">Logout</a>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <!-- Statistics Bar -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-info">
+            <h4>Total Clients</h4>
+            <p><%= clients.length %></p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <h4>Active</h4>
+            <p><%= clients.filter(c => c.enabled).length %></p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏸️</div>
+          <div class="stat-info">
+            <h4>Disabled</h4>
+            <p><%= clients.filter(c => !c.enabled).length %></p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-info">
+            <h4>Expired</h4>
+            <p><%= clients.filter(c => c.expired).length || 0 %></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions-bar">
+        <button onclick="showAddClientModal()" class="btn btn-primary">+ New Client</button>
+        <input type="text" id="searchInput" placeholder="🔍 Search clients..." style="padding: 12px 18px; border: 1px solid var(--border-color); background: var(--bg-tertiary); border-radius: 10px; color: var(--text-primary); font-family: 'Rajdhani', sans-serif; font-weight: 500; flex: 1; max-width: 300px;">
+      </div>
+
+      <div class="clients-container">
+        <% if (clients.length === 0) { %>
+          <div class="empty-state">
+            <p>🚀 No clients yet. Create your first WireGuard client!</p>
+          </div>
+        <% } else { %>
+          <div class="clients-grid" id="clientsGrid">
+            <% clients.forEach(client => { %>
+              <div class="client-card <%= client.expired ? 'client-expired' : '' %>" data-id="<%= client.id %>" data-name="<%= client.name.toLowerCase() %>">
+                <div class="client-header">
+                  <h3><%= client.name %></h3>
+                  <span class="status-badge <%= client.expired ? 'status-expired' : (client.enabled ? 'status-enabled' : 'status-disabled') %>">
+                    <%= client.expired ? '⏰ Expired' : (client.enabled ? '● Online' : '○ Offline') %>
+                  </span>
+                </div>
+                
+                <div class="client-info">
+                  <div class="info-row">
+                    <span class="label">IP Address</span>
+                    <span class="value"><%= client.address %></span>
+                  </div>
+                  <div class="info-row">
+                    <span class="label">Last Seen</span>
+                    <span class="value"><%= client.lastSeen || 'Never' %></span>
+                  </div>
+                  <div class="info-row">
+                    <span class="label">Created</span>
+                    <span class="value"><%= new Date(client.createdAt).toLocaleDateString() %></span>
+                  </div>
+                  <% if (client.expiryDate) { %>
+                  <div class="info-row">
+                    <span class="label">Expires</span>
+                    <span class="value <%= client.expired ? 'text-danger' : '' %>"><%= new Date(client.expiryDate).toLocaleDateString() %></span>
+                  </div>
+                  <% } %>
+                  <% if (client.bandwidth) { %>
+                  <div class="info-row">
+                    <span class="label">Data ⬇️/⬆️</span>
+                    <span class="value"><%= client.bandwidth.received %> / <%= client.bandwidth.sent %></span>
+                  </div>
+                  <% } %>
+                  <% if (client.notes) { %>
+                  <div class="info-row" style="grid-column: 1 / -1; margin-top: 10px;">
+                    <div style="width: 100%;">
+                      <span class="label">Notes</span>
+                      <div class="client-notes"><%= client.notes %></div>
+                    </div>
+                  </div>
+                  <% } %>
+                </div>
+                
+                <div class="client-actions">
+                  <button onclick="showQRCode('<%= client.id %>')" class="btn btn-small btn-primary">📱 QR</button>
+                  <button onclick="downloadConfig('<%= client.id %>')" class="btn btn-small btn-success">⬇️ Config</button>
+                  <button onclick="editClient('<%= client.id %>')" class="btn btn-small btn-secondary">✏️ Edit</button>
+                  <button onclick="toggleClient('<%= client.id %>')" class="btn btn-small btn-warning" <%= client.expired ? 'disabled title="Cannot enable expired client"' : '' %>>
+                    <%= client.enabled ? '⏸️ Disable' : '▶️ Enable' %>
+                  </button>
+                  <button onclick="deleteClient('<%= client.id %>', '<%= client.name %>')" class="btn btn-small btn-danger">🗑️ Delete</button>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Client Modal -->
+  <div id="addClientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚡ New Client</h2>
+        <button onclick="closeModal()" class="close-btn">&times;</button>
+      </div>
+      <form id="addClientForm" onsubmit="addClient(event)">
+        <div class="form-group">
+          <label for="clientName">Client Name *</label>
+          <input type="text" id="clientName" name="name" required placeholder="e.g., John's iPhone" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="expiryDays">Expiry (Optional)</label>
+          <select id="expiryDays" name="expiryDays" style="width: 100%; padding: 14px 18px; border: 1px solid var(--border-color); background: var(--bg-tertiary); border-radius: 10px; color: var(--text-primary); font-family: 'Rajdhani', sans-serif; font-weight: 500;">
+            <option value="">Never expires</option>
+            <option value="7">7 days</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+            <option value="365">1 year</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="clientNotes">Notes (Optional)</label>
+          <textarea id="clientNotes" name="notes" placeholder="Add notes about this client..." style="width: 100%; padding: 14px 18px; border: 1px solid var(--border-color); background: var(--bg-tertiary); border-radius: 10px; color: var(--text-primary); font-family: 'Rajdhani', sans-serif; font-weight: 500; min-height: 80px; resize: vertical;"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Client</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Client Modal -->
+  <div id="editClientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>✏️ Edit Client</h2>
+        <button onclick="closeEditModal()" class="close-btn">&times;</button>
+      </div>
+      <form id="editClientForm" onsubmit="updateClient(event)">
+        <input type="hidden" id="editClientId">
+        <div class="form-group">
+          <label for="editExpiryDays">Expiry</label>
+          <select id="editExpiryDays" name="expiryDays" style="width: 100%; padding: 14px 18px; border: 1px solid var(--border-color); background: var(--bg-tertiary); border-radius: 10px; color: var(--text-primary); font-family: 'Rajdhani', sans-serif; font-weight: 500;">
+            <option value="">Never expires</option>
+            <option value="7">Expires in 7 days</option>
+            <option value="30">Expires in 30 days</option>
+            <option value="90">Expires in 90 days</option>
+            <option value="365">Expires in 1 year</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editClientNotes">Notes</label>
+          <textarea id="editClientNotes" name="notes" placeholder="Add notes about this client..." style="width: 100%; padding: 14px 18px; border: 1px solid var(--border-color); background: var(--bg-tertiary); border-radius: 10px; color: var(--text-primary); font-family: 'Rajdhani', sans-serif; font-weight: 500; min-height: 120px; resize: vertical;"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" onclick="closeEditModal()" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div id="qrModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📱 QR Code</h2>
+        <button onclick="closeQRModal()" class="close-btn">&times;</button>
+      </div>
+      <div id="qrCodeContainer" class="qr-container">
+        <div class="spinner" id="qrSpinner"></div>
+        <img id="qrCodeImage" src="" alt="QR Code" style="display: none;">
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
