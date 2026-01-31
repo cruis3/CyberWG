@@ -30,3 +30,7 @@ Upload all files contained into a folder on your server. Run the installer sh in
 The installer will guide you the rest of the way.
 
 If you find that you are unable to access the internet when connected to WireGuard run the following sh fix-internet.sh
+
+
+
+<img width="1400" height="911" alt="Screenshot 2026-01-31 at 09-06-06 CyberWG - WireGuard Management" src="https://github.com/user-attachments/assets/406171a2-6f8d-4d1f-9013-5033bbe8e639" />
