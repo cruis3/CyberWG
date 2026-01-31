@@ -7,14 +7,26 @@ I designed this due to so many other projects required docker or alot of configu
 
 Requirements:
 OS: Ubuntu / Debian | CentOS / RHEL | Arch
-< br />
+
+
 WireGuard: 
+
 Ubuntu/Debian: sudo apt install wireguard
+
 CentOS/RHEL: sudo yum install wireguard-tools
+
 Arch: sudo pacman -S wireguard-tools
 
 NodeJS:
+
 Ubuntu/Debian: sudo apt install nodejs -y
+
 CentOS/RHEL: sudo yum install epel-release | sudo yum install nodejs
+
 Arch: sudo pacman -S nodejs npm
 
+Upload all files contained into a folder on your server. Run the installer sh install.sh 
+
+The installer will guide you the rest of the way.
+
+If you find that you are unable to access the internet when connected to WireGuard run the following sh fix-internet.sh
